@@ -31,7 +31,7 @@ class ArbsQuery:
         print(self.dataBase[(self.dataBase.started_at > datetime.now())])
         try:
             self.dataBase = pd.read_csv(self.csv)
-            self.dataBase[(self.dataBase.started_at > datetime.now())]['bets'] = self.dataBase['bet1_id'] + "," + self.dataBase['bet1_id']
+            self.dataBase['bets'] = self.dataBase['bet1_id'] + "," + self.dataBase['bet1_id']
             for eventId in self.dataBase['bets'].iteritems():
                 self.excluded_bets = self.excluded_bets + str(eventId[1]) + ','
         except:

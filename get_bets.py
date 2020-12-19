@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Dec 12 20:00:03 2020
 
-@author: laramelguizogaliano
-"""
-
-import pandas as pd
 import sqlite3
+from datetime import datetime
+
 import requests
 import pandas as pd
-from Func_clases import *
 import os
 from iBotAutomation.dataBase_activities import Sqlite
-import sched, time
+import sched,time
+
 
 class ArbsQuery:
     def __init__(self):
@@ -31,10 +27,11 @@ class ArbsQuery:
         self.sqlite = Sqlite("/Users/enriquecrespodebenito/Desktop/Betburger API/surebets.sqlite")
 
     def excludedBets(self):
-        self.excluded_bets =""
+        self.excluded_bets = ""
+        print(self.dataBase[(self.dataBase.started_at > datetime.now())])
         try:
             self.dataBase = pd.read_csv(self.csv)
-            self.dataBase['bets'] = self.dataBase['bet1_id'] + "," + self.dataBase['bet1_id']
+            self.dataBase[(self.dataBase.started_at > datetime.now())]['bets'] = self.dataBase['bet1_id'] + "," + self.dataBase['bet1_id']
             for eventId in self.dataBase['bets'].iteritems():
                 self.excluded_bets = self.excluded_bets + str(eventId[1]) + ','
         except:
@@ -60,19 +57,15 @@ class ArbsQuery:
                     self.sqlite.Insert("arbs", arb)
                 except:
                     pass
-
             for bet in data['bets']:
                 try:
                     self.sqlite.Insert("bets", bet)
                 except:
                     pass
-
-
             self.dataBase = pd.read_csv(self.csv)
             print("DataBase Size:", self.dataBase.size)
 
     def run(self, sc):
-
         try:
             data = self.getData()
             self.processData(data)
@@ -86,4 +79,3 @@ if __name__ == "__main__":
     s = sched.scheduler(time.time, time.sleep)
     s.enter(10, 1, query.run, (s,))
     s.run()
-

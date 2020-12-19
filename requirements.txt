@@ -1,0 +1,11 @@
+requests~=2.24.0
+pandas~=1.1.0
+pytesseract~=0.3.4
+Pillow~=7.1.2
+docx~=0.2.4
+docx2pdf~=0.1.7
+openpyxl~=3.0.4
+PyPDF2~=1.26.0
+DateTime~=4.3
+PyAutoGUI~=0.9.50
+selenium~=3.141.0

@@ -3,67 +3,73 @@
 
 import sqlite3
 from datetime import datetime
-
 import requests
 import pandas as pd
 import os
-from iBotAutomation.dataBase_activities import Sqlite
-import sched,time
+from iBot.dataBase_activities import Sqlite
+import sched, time
+from sqlalchemy import create_engine
 
 
 class ArbsQuery:
+    SQLITE_PATH = "/Users/enriquecrespodebenito/Documents/BetBurger/bBurger/surebets.sqlite"
     def __init__(self):
-        self.token = '52de173b6b08870dfb070f3ee3e98d92'
+        self.token = '103d99a7c2fd74fb9d0f821a35099f81'
         self.filter_id = "423552"
         self.excluded_bets = ""
         self.url = "https://rest-api-pr.betburger.com/api/v1/arbs/bot_search"
         self.headers = {
             "accept": "application/json",
             "Content-Type": "application/x-www-form-urlencoded"}
+        self.sqlite = Sqlite(self.SQLITE_PATH)
+        self.sqliteConnection = sqlite3.connect(self.SQLITE_PATH)
         self.data = None
         self.request = None
-        self.csv = "/Users/enriquecrespodebenito/Desktop/Betburger API/surebets.csv"
         self.dataBase = None
-        self.sqlite = Sqlite("/Users/enriquecrespodebenito/Desktop/Betburger API/surebets.sqlite")
 
     def excludedBets(self):
         self.excluded_bets = ""
-        print(self.dataBase[(self.dataBase.started_at > datetime.now())])
+        now = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
         try:
-            self.dataBase = pd.read_csv(self.csv)
-            self.dataBase['bets'] = self.dataBase['bet1_id'] + "," + self.dataBase['bet1_id']
-            for eventId in self.dataBase['bets'].iteritems():
-                self.excluded_bets = self.excluded_bets + str(eventId[1]) + ','
+            self.filter = pd.read_sql_query(f"Select bet1_id,  bet2_id, bet3_id from arbs where started_at > '{now}' ", con=self.sqliteConnection)
+            self.filter['bets'] = self.filter['bet1_id'] + "," + self.filter['bet2_id'] + ',' + self.filter['bet3_id'].fillna('')
+            for eventId in self.filter['bets'].iteritems():
+                if eventId:
+                    self.excluded_bets = self.excluded_bets + str(eventId[1]) + ','
+
         except:
             self.excluded_bets = ""
 
-    def getData(self):
+    def getArbsData(self):
         self.excludedBets()
-        self.data = f"search_filter[]={self.filter_id}&per_page=30&&excluded_bets[]={self.excluded_bets[:-1]}&access_token={self.token}"
+        self.data = f"search_filter[]={self.filter_id}&per_page=30&&excluded_bets[]={self.excluded_bets[:-2]}&access_token={self.token}"
         self.request = requests.post(self.url, headers=self.headers, data=self.data)
+        print(self.request)
+
         return self.request.json()
 
-    def processData(self, data):
-        print(self.request)
+        return self.request.json()
+
+    def processArbs(self, data):
         if self.request.json()['total_by_filter'] > 0:
             d = pd.json_normalize(data['arbs'])
-            df = pd.DataFrame(d)
-            df['started_at'] = pd.to_datetime(df['started_at'], unit='s')
-            df['created_at'] = pd.to_datetime(df['created_at'], unit='s')
-            df['updated_at'] = pd.to_datetime(df['updated_at'], unit='s')
-            df.to_csv(self.csv, mode='a', header=True, index=False)
-            for arb in data['arbs']:
-                try:
-                    self.sqlite.Insert("arbs", arb)
-                except:
-                    pass
-            for bet in data['bets']:
-                try:
-                    self.sqlite.Insert("bets", bet)
-                except:
-                    pass
-            self.dataBase = pd.read_csv(self.csv)
-            print("DataBase Size:", self.dataBase.size)
+            arbsdf = pd.DataFrame(d)
+            arbsdf['started_at'] = pd.to_datetime(arbsdf['started_at'], unit='s')
+            arbsdf['created_at'] = pd.to_datetime(arbsdf['created_at'], unit='s')
+            arbsdf['updated_at'] = pd.to_datetime(arbsdf['updated_at'], unit='s')
+            arbsdf = arbsdf.drop(['event_name_ru'], axis=1)
+            arbsdf = arbsdf.drop(['league_ru'], axis=1)
+            arbsdf = arbsdf.drop(['team1_name_ru'], axis=1)
+            arbsdf = arbsdf.drop(['team2_name_ru'], axis=1)
+            arbsdf = arbsdf.drop(['bk_ids'], axis=1)
+            arbsdf = arbsdf.drop(['f_id'], axis=1)
+            arbsdf.to_sql(name='arbs', con=self.sqliteConnection, if_exists='append', index = False)
+            b = pd.json_normalize(data['bets'])
+            betsdf = pd.DataFrame(b)
+            betsdf['started_at'] = pd.to_datetime(betsdf['started_at'], unit='s')
+            betsdf['updated_at'] = pd.to_datetime(betsdf['updated_at'], unit='s')
+            betsdf = betsdf.drop(['player_ids'], axis=1)
+            betsdf.to_sql(name='bets', con=self.sqliteConnection, if_exists='append', index = False)
 
     def run(self, sc):
         try:

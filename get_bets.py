@@ -45,9 +45,6 @@ class ArbsQuery:
         self.data = f"search_filter[]={self.filter_id}&per_page=30&&excluded_bets[]={self.excluded_bets[:-2]}&access_token={self.token}"
         self.request = requests.post(self.url, headers=self.headers, data=self.data)
         print(self.request)
-
-        return self.request.json()
-
         return self.request.json()
 
     def processArbs(self, data):
@@ -73,8 +70,8 @@ class ArbsQuery:
 
     def run(self, sc):
         try:
-            data = self.getData()
-            self.processData(data)
+            data = self.getArbsData()
+            self.processArbs(data)
         except:
             pass
         s.enter(10, 1, self.run, (sc,))

@@ -33,11 +33,13 @@ class Robot:
         return credentials
 
     def run(self):
-        url = "https://www.betburger.com/bets/MTA3Mjg3NDc3fDE5LDMuNSw0LDAsMCww?access_token=e789307c7011f12e2e08ea9205043599&amp;is_live=0"
+        url = "https://www.betfair.es/sport/"
         cedentials = self.getCredentials("Betfair")
-        BF = Betfair(self.browser,url, cedentials[0], cedentials[1], 1)
+        BF = Betfair(self.browser,url, cedentials[0], cedentials[1], 1, "event", "cuote", "market")
         BF.login()
-        BF.makeBet()
+        BF.getBalance()
+        BF.getBets()
+        #BF.makeBet()
 
 if __name__ == "__main__":
     Robot().run()

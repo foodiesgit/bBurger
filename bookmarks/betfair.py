@@ -17,12 +17,12 @@ class Betfair:
     BET_HANDICAP_LABEL = 'ui-runner-handicap ui-924_248520957-7017911'
     BET_CUOTE = "//span[@class='odds ui-runner-price ui-924_248520957-7017911 ui-display-decimal-price']"
     BET_MARKET = "//div[@class='market']"
-    BALANCE = "//td[@id='yui_3_5_0_1_1608486443438_65669']"
+    BALANCE = "//tr[@rel='main-wallet']/td[contains(text(),'€')]"
     MI_CUENTA = "//a[@class='ssc-unc']"
-    MIS_APUESTAS = "//a[@class='ssc-myBets']"
+    MIS_APUESTAS = "//a[contains(@class,'ssc-myBets')]"
     BET_PANEL = "//div[@class='bet--panel']"
-
-
+    APUESTAS_ASENTADAS = "//button[contains(@class,'btn btn-past')]"
+    APUESTAS_ABIERTAS = "//button[contains(@class,'btn btn-current')]"
 
     def __init__(self, browser, url, user, password, amount, event, cuote, market):
         self.browser = browser
@@ -33,7 +33,7 @@ class Betfair:
         self.event = event
         self.cuote = cuote
         self.market = market
-        self.balance = self.getbalance()
+        self.balance = None
 
     def login(self):
         ##### Locate elements in Page object ####
@@ -42,8 +42,11 @@ class Betfair:
         print(self.browser.ucDriver.execute_script('return navigator.webdriver'))
         self.browser.ucDriver.get(self.url)
         time.sleep(10)
-        aceptCoockies = self.browser.ucDriver.find_element_by_xpath(self.ACCEPT_COOCKIES)
-        aceptCoockies.click()
+        try:
+            aceptCoockies = self.browser.ucDriver.find_element_by_xpath(self.ACCEPT_COOCKIES)
+            aceptCoockies.click()
+        except:
+            pass
         UserInput = self.browser.ucDriver.find_element_by_xpath(self.USER_INPUT)
         UserPassword = self.browser.ucDriver.find_element_by_xpath(self.PASSWORD_INPUT)
         UserInput.send_keys(self.user)
@@ -82,18 +85,40 @@ class Betfair:
         if event != self.event:
             raise Exception("El nombre de los eventos no coinciden")
 
-    def getBalance(self) -> object:
-        return self.browser.ucDriver.find_element_by_xpath(self.BALANCE)
+    def getBalance(self):
+        self.balance = self.browser.ucDriver.find_element_by_xpath(self.BALANCE).text
 
     def getBets(self):
         self.browser.ucDriver.find_element_by_xpath(self.MI_CUENTA).click()
         self.browser.ucDriver.find_element_by_xpath(self.MIS_APUESTAS).click()
         time.sleep(10)
+        self.browser.ucDriver.find_element_by_xpath(self.APUESTAS_ASENTADAS).click()
+        time.sleep(3)
+        apuestas = self.browser.ucDriver.find_elements_by_xpath(self.BET_PANEL)
+        bet_list=[]
+        for apuesta in apuestas:
+            nombre = apuesta.find_element_by_xpath("//span[contains(@class,'event__name')]").text
+            market = apuesta.find_element_by_xpath("//span[contains(@class,'market__name')]").text
+            gp = apuesta.find_element_by_xpath("//div[contains(@class,'bet__status')]").text
+            cuota = apuesta.find_element_by_xpath("//span[contains(@class,'bet__amount')]").text
+            apuesta = apuesta.find_element_by_xpath("//span[contains(@class,'stake--value')]").text
+            status = "Asentadas"
+            bet_list.append(
+                {"Nombre":nombre,"Market":market,"GP":gp,"Cuota":cuota, "Apuesta":apuesta, "status":status})
+
+        self.browser.ucDriver.find_element_by_xpath(self.APUESTAS_ABIERTAS).click()
+        time.sleep(3)
         apuestas = self.browser.ucDriver.find_elements_by_xpath(self.BET_PANEL)
 
         for apuesta in apuestas:
-            apuesta.find_element_by_xpath
-
+            nombre = apuesta.find_element_by_xpath("//span[contains(@class,'event__name')]").text
+            market = apuesta.find_element_by_xpath("//span[contains(@class,'market__name')]").text
+            gp = apuesta.find_element_by_xpath("//div[contains(@class,'bet__status')]").text
+            cuota = apuesta.find_element_by_xpath("//span[contains(@class,'bet__amount')]").text
+            apuesta = apuesta.find_element_by_xpath("//span[contains(@class,'stake--value')]").text
+            status = "Abiertas"
+            bet_list.append(
+                {"Nombre": nombre, "Market": market, "GP": gp, "Cuota": cuota, "Apuesta": apuesta, "status": status})
 
     def makeBet(self):
         #### Put AMOUNT in the bet Slip #####

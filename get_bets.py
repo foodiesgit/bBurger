@@ -13,8 +13,25 @@ from sqlalchemy import create_engine
 
 class ArbsQuery:
     SQLITE_PATH = "/Users/enriquecrespodebenito/Documents/BetBurger/bBurger/surebets.sqlite"
+    BOOKMARKS_BY_BETS_QUERY = '''select  Bookmarkers.name,  COUNT(DISTINCT(bets.id)) 
+                                from bets INNER JOIN Bookmarkers on bets.bookmaker_id = Bookmarkers.ID
+                                GROUP BY bets.bookmaker_id 
+                                ORDER BY COUNT(bets.id) DESC'''
+
+    ARBS_BY_BETS = '''  select  arbs.event_name, BK1.name as bet_1, BK2.name as bet_2, BK3.name as bet_3, ARBS.percent
+                        from arbs
+                        INNER JOIN bets as b1 on arbs.bet1_id = b1.id  
+                        INNER JOIN Bookmarkers as BK1 on  BK1.ID =b1.bookmaker_id 
+                        
+                        INNER JOIN bets as b2 on arbs.bet2_id = b2.id  
+                        INNER JOIN Bookmarkers as BK2 on  BK2.ID =b2.bookmaker_id 
+                        
+                        LEFT JOIN bets as b3 on arbs.bet3_id = b3.id  
+                        LEFT JOIN Bookmarkers as BK3 on  BK3.ID =b3.bookmaker_id 
+                    '''
+
     def __init__(self):
-        self.token = '103d99a7c2fd74fb9d0f821a35099f81'
+        self.token = '5b18343ad1a73ac1f7e9d6511d7bebe3'
         self.filter_id = "423552"
         self.excluded_bets = ""
         self.url = "https://rest-api-pr.betburger.com/api/v1/arbs/bot_search"
@@ -31,8 +48,11 @@ class ArbsQuery:
         self.excluded_bets = ""
         now = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
         try:
-            self.filter = pd.read_sql_query(f"Select bet1_id,  bet2_id, bet3_id from arbs where started_at > '{now}' ", con=self.sqliteConnection)
-            self.filter['bets'] = self.filter['bet1_id'] + "," + self.filter['bet2_id'] + ',' + self.filter['bet3_id'].fillna('')
+            self.filter = pd.read_sql_query(
+                f"Select bet1_id,  bet2_id, bet3_id from arbs where started_at > '{now}' LIMIT = 1000 ",
+                con=self.sqliteConnection)
+            self.filter['bets'] = self.filter['bet1_id'] + "," + self.filter['bet2_id'] + ',' + self.filter[
+                'bet3_id'].fillna('')
             for eventId in self.filter['bets'].iteritems():
                 if eventId:
                     self.excluded_bets = self.excluded_bets + str(eventId[1]) + ','
@@ -60,13 +80,13 @@ class ArbsQuery:
             arbsdf = arbsdf.drop(['team2_name_ru'], axis=1)
             arbsdf = arbsdf.drop(['bk_ids'], axis=1)
             arbsdf = arbsdf.drop(['f_id'], axis=1)
-            arbsdf.to_sql(name='arbs', con=self.sqliteConnection, if_exists='append', index = False)
+            arbsdf.to_sql(name='arbs', con=self.sqliteConnection, if_exists='append', index=False)
             b = pd.json_normalize(data['bets'])
             betsdf = pd.DataFrame(b)
             betsdf['started_at'] = pd.to_datetime(betsdf['started_at'], unit='s')
             betsdf['updated_at'] = pd.to_datetime(betsdf['updated_at'], unit='s')
             betsdf = betsdf.drop(['player_ids'], axis=1)
-            betsdf.to_sql(name='bets', con=self.sqliteConnection, if_exists='append', index = False)
+            betsdf.to_sql(name='bets', con=self.sqliteConnection, if_exists='append', index=False)
 
     def run(self, sc):
         try:

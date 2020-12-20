@@ -1,10 +1,8 @@
-import time
-from selenium.webdriver.common import keys
 from iBot.excel_activities import Excel
 from iBot.browser_activities import ChromeBrowser
-from Automation import WHill
+from bookmarks.betfair import Betfair
 import os
-from selenium.webdriver.common.keys import Keys
+
 
 class Robot:
 
@@ -35,10 +33,11 @@ class Robot:
         return credentials
 
     def run(self):
-        url = "https://www.betburger.com/bets/MTA2NzM5NTU0fDE3LC0wLjUsNCwwLDAsMA?access_token=d4d2b01df0647f899db0abd4bed2e015&amp;is_live=0"
+        url = "https://www.betburger.com/bets/MTA3Mjg3NDc3fDE5LDMuNSw0LDAsMCww?access_token=e789307c7011f12e2e08ea9205043599&amp;is_live=0"
         cedentials = self.getCredentials("Betfair")
-        WH = WHill(self.browser,url, cedentials[0], cedentials[1], 1)
-        WH.login()
+        BF = Betfair(self.browser,url, cedentials[0], cedentials[1], 1)
+        BF.login()
+        BF.makeBet()
 
 if __name__ == "__main__":
     Robot().run()
